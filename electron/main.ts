@@ -1,36 +1,82 @@
-import { app, BrowserWindow } from "electron";
-import * as path from "path";
-import * as url from "url";
+import { app, BrowserWindow, Menu, MenuItem } from 'electron';
+import * as path from 'path';
+import * as url from 'url';
 
-let mainWindow: Electron.BrowserWindow | null;
+import { InitMainMenu } from './Menu/MainMenu';
+
+const contextMenu = require('electron-context-menu');
+const CONFIG = require('./config.json');
+const fs = require('fs');
 
 function createWindow() {
-  mainWindow = new BrowserWindow({
-    width: 800,
-    height: 600,
+  const { width, height, fullscreenable, fullscreen, maximizable } = CONFIG;
+
+  let alwaysOnTop: boolean = CONFIG.alwaysOnTop || false;
+
+  const win = new BrowserWindow({
+    width,
+    height,
+    fullscreenable,
+    fullscreen,
+    maximizable,
+    frame: process.platform === 'darwin',
     webPreferences: {
-      nodeIntegration: true,
-      webSecurity: false,
-    },
+      preload: path.join(__dirname, 'preload.js'),
+      enableRemoteModule: true,
+      nodeIntegration: true
+    }
   });
 
-  if (process.env.NODE_ENV === "development") {
-    mainWindow.loadURL(`http://localhost:4000`);
-    mainWindow.webContents.openDevTools();
+  // Init Main Top Menu
+  InitMainMenu();
+
+  // context menu
+  let setWindowsOnTop = () => {
+    alwaysOnTop = !alwaysOnTop;
+
+    fs.writeFile(path.join(__dirname, '/config.json'), JSON.stringify({ ...CONFIG, alwaysOnTop }), (err: Error) => {
+      if (err) console.error(err);
+    });
+
+    // @ts-ignore
+    win.setAlwaysOnTop(alwaysOnTop, `screen`);
+  };
+
+  contextMenu({
+    // @ts-ignore
+    prepend: (defaultActions, parameters, browserWindow) => [
+      {
+        label: 'Always On Top',
+        visible: true,
+        click: () => {
+          setWindowsOnTop();
+        }
+      },
+      {
+        label: 'Reload',
+        visible: true,
+        click: () => {
+          let currentURL = win.webContents.getURL();
+          win.loadURL(currentURL, { userAgent: 'Chrome' });
+        }
+      }
+    ]
+  });
+
+
+  if (process.env.NODE_ENV === 'development') {
+    win.loadURL(`http://localhost:4000`);
+    win.webContents.openDevTools();
   } else {
-    mainWindow.loadURL(
+    win.loadURL(
       url.format({
-        pathname: path.join(__dirname, "index.html"),
-        protocol: "file:",
-        slashes: true,
+        pathname: path.join(__dirname, 'index.html'),
+        protocol: 'file:',
+        slashes: true
       })
     );
   }
-
-  mainWindow.on("closed", () => {
-    mainWindow = null;
-  });
 }
 
-app.on("ready", createWindow);
+app.on('ready', createWindow);
 app.allowRendererProcessReuse = true;

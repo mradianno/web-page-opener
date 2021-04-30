@@ -42,8 +42,11 @@
     "webpack-dev-server": "^3.10.3"
   },
   "dependencies": {
+    "@electron/remote": "^1.1.0",
     "@types/react": "^16.9.34",
     "@types/react-dom": "^16.9.6",
+    "custom-electron-titlebar": "^3.2.6",
+    "electron-context-menu": "^2.5.2",
     "react": "^16.13.1",
     "react-dom": "^16.13.1"
   }
